@@ -1,0 +1,27 @@
+# Thresholds and timers. Tune on site against recorded bags.
+pitcher_tracker:
+  ros__parameters:
+    tag_hsv_low: [40, 120, 120]    # neon green
+    tag_hsv_high: [80, 255, 255]
+    min_tag_area_px: 150
+    debounce_frames: 5
+    return_gone_s: 3.0
+faucet_watcher:
+  ros__parameters:
+    faucet_motion_threshold: 0.15
+    pixel_diff_threshold: 25
+    start_hold_s: 1.0
+    stop_hold_s: 1.5
+sink_checker:
+  ros__parameters:
+    sink_full_threshold: 0.12
+    state_hold_s: 60.0
+snitch_logic:
+  ros__parameters:
+    refill_min_s: 20.0
+    pitcher_out_max_min: 15.0
+    dishes_max_min: 30.0
+    alert_cooldown_min: 30.0
+    quiet_start: "23:00"
+    quiet_end: "07:00"
+    log_path: "logs/events.log"

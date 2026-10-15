@@ -121,30 +121,30 @@ Each detector only knows about its own job. All the "is this a violation?" reaso
 ```
 KitchenSnitch/
 ├── README.md
+├── LICENSE
+├── .github/workflows/tests.yml     # runs the pure-Python tests on every push
 ├── docs/
 │   └── TECHNICAL_DESIGN.md
-├── config/
-│   ├── zones.yaml            # pixel regions for fridge, sink, faucet
-│   └── params.yaml           # thresholds, timers, quiet hours
 ├── scripts/
-│   └── calibrate_zones.py    # click-to-draw zone tool
-├── bags/                     # recorded test footage (gitignored)
-├── logs/                     # runtime event logs (gitignored)
+│   └── calibrate_zones.py          # drag-a-rectangle zone tool, writes zones.yaml
+├── bags/                           # recorded test footage (gitignored)
+├── logs/                           # runtime event logs (gitignored)
 └── src/
     ├── kitchensnitch_interfaces/   # custom .msg definitions (ament_cmake)
-    │   └── msg/
-    │       ├── PitcherEvent.msg
-    │       ├── FaucetEvent.msg
-    │       ├── SinkState.msg
-    │       └── Alert.msg
     ├── kitchensnitch_vision/       # pitcher_tracker, sink_checker (ament_python)
+    │   └── kitchensnitch_vision/pitcher_state.py   # tag state machine, no ROS imports
     ├── kitchensnitch_faucet/       # faucet_watcher (ament_cmake, C++)
     ├── kitchensnitch_logic/        # snitch_logic, telegram_node (ament_python)
-    └── kitchensnitch_bringup/      # launch files
+    │   └── kitchensnitch_logic/rules.py            # chore rules, no ROS imports
+    └── kitchensnitch_bringup/      # launch files and config
+        ├── config/zones.yaml       # fridge, sink, faucet regions
+        ├── config/params.yaml      # thresholds, timers, quiet hours
         └── launch/
             ├── kitchensnitch.launch.py   # live camera
             └── replay.launch.py          # bag playback for testing
 ```
+
+The decision logic (`rules.py`, `pitcher_state.py`) is kept free of ROS imports on purpose, so it runs under plain `pytest` on any machine, including CI.
 
 ## 7. Interfaces
 
@@ -318,41 +318,27 @@ Example messages:
 
 ## 9. Configuration
 
-`config/zones.yaml` (normalized 0..1 coordinates, so changing resolution doesn't break them)
-```yaml
-fridge: {x: 0.70, y: 0.10, w: 0.28, h: 0.80}
-sink:   {x: 0.10, y: 0.45, w: 0.40, h: 0.35}
-faucet: {x: 0.25, y: 0.35, w: 0.08, h: 0.12}
-```
+Both files live in `src/kitchensnitch_bringup/config/` and are passed to every node as ROS parameter files, so each node reads its own section.
 
-`config/params.yaml`
+`zones.yaml` holds normalized `[x, y, w, h]` regions (0..1 of the frame), so changing resolution doesn't break them:
 ```yaml
 pitcher_tracker:
   ros__parameters:
-    tag_hsv_low:  [40, 120, 120]   # neon green, tune on site
-    tag_hsv_high: [80, 255, 255]
-    min_tag_area_px: 150
-    debounce_frames: 5
-faucet_watcher:
-  ros__parameters:
-    faucet_motion_threshold: 0.15
-    start_hold_s: 1.0
-    stop_hold_s: 1.5
+    fridge_zone: [0.70, 0.10, 0.28, 0.80]
+    sink_zone:   [0.10, 0.45, 0.40, 0.35]
 sink_checker:
   ros__parameters:
-    sink_full_threshold: 0.12
-    state_hold_s: 60
-snitch_logic:
+    sink_zone:   [0.10, 0.45, 0.40, 0.35]
+faucet_watcher:
   ros__parameters:
-    refill_min_s: 20
-    pitcher_out_max_min: 15
-    dishes_max_min: 30
-    alert_cooldown_min: 30
-    quiet_start: "23:00"
-    quiet_end: "07:00"
+    faucet_zone: [0.25, 0.35, 0.08, 0.12]
 ```
 
-`scripts/calibrate_zones.py` grabs one frame, lets you drag a rectangle for each zone, and writes `zones.yaml`.
+`params.yaml` holds the thresholds and timers (HSV range for the tag, faucet motion threshold, sink-full threshold, 20 s refill, 15 min out, 30 min dishes, 30 min cooldown, quiet hours). See the file for the full list.
+
+`scripts/calibrate_zones.py` takes a photo (or a webcam frame), lets you drag a rectangle for each zone, and writes `zones.yaml`. After changing config, rebuild with `colcon build --symlink-install` or relaunch, since the files are installed into the workspace.
+
+**Replay note:** the detectors use the image timestamps, so bag replay gives the same durations as live. `snitch_logic` uses the wall clock for its timers and quiet hours, so replay bags at normal speed (`--rate 1.0`).
 
 ## 10. Setup and build
 

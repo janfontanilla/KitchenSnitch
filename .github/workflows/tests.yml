@@ -1,0 +1,25 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pure-python:
+    # Runs the decision logic that has no ROS dependency.
+    # The full ROS2 build happens on the dev machine / Pi.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pytest
+      - name: Chore rules
+        run: python -m pytest -q src/kitchensnitch_logic/test
+        env:
+          PYTHONPATH: src/kitchensnitch_logic
+      - name: Pitcher state machine
+        run: python -m pytest -q src/kitchensnitch_vision/test
+        env:
+          PYTHONPATH: src/kitchensnitch_vision

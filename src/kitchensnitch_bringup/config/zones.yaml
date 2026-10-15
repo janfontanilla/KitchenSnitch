@@ -1,0 +1,12 @@
+# Normalized [x, y, w, h] zones (0..1 of the frame).
+# Regenerate with: python3 scripts/calibrate_zones.py
+pitcher_tracker:
+  ros__parameters:
+    fridge_zone: [0.70, 0.10, 0.28, 0.80]
+    sink_zone: [0.10, 0.45, 0.40, 0.35]
+sink_checker:
+  ros__parameters:
+    sink_zone: [0.10, 0.45, 0.40, 0.35]
+faucet_watcher:
+  ros__parameters:
+    faucet_zone: [0.25, 0.35, 0.08, 0.12]
