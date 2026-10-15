@@ -1,0 +1,16 @@
+# colcon build output
+build/
+install/
+log/
+
+# recorded footage and runtime logs (privacy)
+bags/
+logs/
+
+# secrets
+.env
+
+# python
+__pycache__/
+*.pyc
+.venv/
